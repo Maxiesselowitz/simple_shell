@@ -94,11 +94,11 @@ void non_interactive_mode(FILE *input)
 /**
  * main - it prints interactive and non-interactive modes
  *
- * @argc - the arguments
+ * @argc: the arguments
  *
- * @argv - the array
+ * @argv: the array
  *
- * Return - Always 0
+ * Return: Always 0
  */
 
 int main(int argc, char *argv[])
