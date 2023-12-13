@@ -1,88 +1,129 @@
 #include <stdio.h>
-#include <string.h>
 #include <stdlib.h>
+#include <string.h>
 #include <unistd.h>
 #include <sys/wait.h>
 
 #define BUFFER_SIZE 1024
 
 /**
- * display_prompt - Display the shell prompt.
- */
-void display_prompt(void)
-{
-    printf("($) ");
-}
-
-/**
- * read_command - Read a command from the user.
+ * execute_command - it executes a command
  *
- * Return: A pointer to the read command.
- */
-char *read_command(void)
-{
-    char *command = NULL;
-    size_t bufsize = 0;
-
-    if (getline(&command, &bufsize, stdin) == -1) {
-        if (feof(stdin)) {
-            printf("\n");
-            exit(EXIT_SUCCESS);
-        } else {
-            perror("getline");
-            exit(EXIT_FAILURE);
-        }
-    }
-
-    return command;
-}
-
-/**
- * execute_command - Execute a command.
+ * @command: the input to execute
  *
- * @command: The command to execute.
+ * Return: ($)
  */
 void execute_command(char *command)
 {
-    pid_t pid;
-    int status;
+	pid_t pid;
+	int status;
 
-    pid = fork();
-    if (pid == 0) {
-	    char *args[2];
-	    args[0] = command;
-	    args[1] = NULL;
+	pid = fork();
 
-        if (execve(command, args, NULL) == -1) {
-            perror("execve");
-            exit(EXIT_FAILURE);
-        }
-    } else if (pid < 0) {
-        perror("fork");
-        exit(EXIT_FAILURE);
-    } else {
+	if (pid == -1)
+	{
 
-        do {
-            pid = waitpid(pid, &status, WUNTRACED);
-	} while (!WIFEXITED(status) && !WIFSIGNALED(status));
+		perror("fork");
+		exit(EXIT_FAILURE);
+	}
+
+	if (pid == 0)
+	{
+		if (execlp(command, command, (char *)NULL) == -1)
+		{
+			perror("execlp");
+			exit(EXIT_FAILURE);
+		}
+	}
+	else
+	{
+		waitpid(pid, &status, 0);
+
+		if (WIFEXITED(status))
+		{
+			printf("($)\n");
+		}
 	}
 }
 
-int main(void)
+/**
+ * interactive_mode - it receives command
+ *
+ */
+
+void interactive_mode(void)
 {
-	char *command;
 
-	while (1) {
-	display_prompt();
-	command = read_command();
+	char buffer[BUFFER_SIZE];
 
-	if (command[strlen(command) - 1] == '\n') {
-		command[strlen(command) - 1] = '\0';
+	while (1)
+	{
+		printf("($) ");
+		if (fgets(buffer, BUFFER_SIZE, stdin) == NULL)
+		{
+			printf("\n");
+			break;
+		}
+		buffer[strcspn(buffer, "\n")] = '\0';
+
+		if (strcmp(buffer, "exit") == 0)
+		{
+			break;
+		}
+		execute_command(buffer);
 	}
-
-	execute_command(command);
-
-	free(command);
 }
-	return 0;
+
+/**
+ * non_interactive_mode - it displays result
+ *
+ * @input: the input
+ */
+
+void non_interactive_mode(FILE *input)
+{
+	char buffer[BUFFER_SIZE];
+
+	while (fgets(buffer, BUFFER_SIZE, input) != NULL)
+	{
+		buffer[strcspn(buffer, "\n")] = '\0';
+		execute_command(buffer);
+	}
 }
+
+/**
+ * main - it prints interactive and non-interactive modes
+ *
+ * @argc - the arguments
+ *
+ * @argv - the array
+ *
+ * Return - Always 0
+ */
+
+int main(int argc, char *argv[])
+{
+	if (argc == 1)
+	{
+		interactive_mode();
+	}
+	else if (argc == 2)
+	{
+		FILE *input = fopen(argv[1], "r");
+
+		if (input == NULL)
+		{
+			perror("fopen");
+			exit(EXIT_FAILURE);
+		}
+		non_interactive_mode(input);
+		fclose(input);
+	}
+	else
+	{
+		fprintf(stderr, "Usage: %s [script]\n", argv[0]);
+		exit(EXIT_FAILURE);
+	}
+	return (0);
+}
+
