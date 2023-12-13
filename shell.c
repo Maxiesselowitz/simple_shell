@@ -1,4 +1,5 @@
 #include <stdio.h>
+#include <string.h>
 #include <stdlib.h>
 #include <unistd.h>
 #include <sys/wait.h>
@@ -43,13 +44,16 @@ char *read_command(void)
  */
 void execute_command(char *command)
 {
-    pid_t pid, wpid;
+    pid_t pid;
     int status;
 
     pid = fork();
     if (pid == 0) {
+	    char *args[2];
+	    args[0] = command;
+	    args[1] = NULL;
 
-        if (execve(command, NULL, NULL) == -1) {
+        if (execve(command, args, NULL) == -1) {
             perror("execve");
             exit(EXIT_FAILURE);
         }
@@ -59,7 +63,7 @@ void execute_command(char *command)
     } else {
 
         do {
-            wpid = waitpid(pid, &status, WUNTRACED);
+            pid = waitpid(pid, &status, WUNTRACED);
 	} while (!WIFEXITED(status) && !WIFSIGNALED(status));
 	}
 }
